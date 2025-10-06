@@ -1,0 +1,39 @@
+name: Deploy Static Website to S3
+
+on:
+  push:
+    branches:
+      - main  # Trigger the deployment on every push to the main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest  # Use a fresh virtual machine for the job
+    environment: production # Use an environment for better logging/security
+    
+    steps:
+      # 1. Checkout Code
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+      
+      # 2. Configure AWS Credentials
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1 # Use the region you created the bucket in
+      
+      # 3. Deploy Files to S3
+      - name: Deploy static site to S3 bucket
+        # We use the AWS CLI's 'sync' command to efficiently copy files
+        # It only uploads changed files and deletes any removed local files from S3
+        run: |
+          aws s3 sync . s3://${{ secrets.S3_BUCKET_NAME }} \
+            --delete \
+            --acl public-read \
+            --exclude ".git/*" \
+            --exclude ".github/*"
+            
+      # 4. Confirmation (Optional but good)
+      - name: Deployment Success Message
+        run: echo "Website successfully deployed to S3!"
